@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>得点計算</title>
+<style>
+  :root {
+    --purple-dark: #3b0764;
+    --purple: #6d28d9;
+    --purple-mid: #8b5cf6;
+    --purple-light: #c4b5fd;
+    --gold: #fbbf24;
+    --white: #ffffff;
+  }
+
+  * {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: hidden;
+    background: linear-gradient(160deg, var(--purple-dark), var(--purple) 60%, var(--purple-mid));
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif;
+    color: var(--white);
+  }
+
+  #app {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ---------- 画面共通 ---------- */
+  .screen {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: env(safe-area-inset-top) 20px env(safe-area-inset-bottom);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+  .screen.active {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* ---------- 入力画面 ---------- */
+  #screen-play {
+    justify-content: space-between;
+    padding-top: max(24px, env(safe-area-inset-top));
+    padding-bottom: max(24px, env(safe-area-inset-bottom));
+  }
+
+  .header {
+    text-align: center;
+    padding-top: 8px;
+  }
+  .header h1 {
+    margin: 0;
+    font-size: clamp(22px, 5vw, 32px);
+    letter-spacing: 0.05em;
+    color: var(--gold);
+    text-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  }
+  .score-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    width: 100%;
+    max-width: 420px;
+    flex: 1;
+    justify-content: center;
+    padding: 16px 0;
+  }
+
+  .score-btn {
+    border: none;
+    border-radius: 20px;
+    padding: 0;
+    height: 76px;
+    font-size: clamp(28px, 8vw, 36px);
+    font-weight: 800;
+    color: white;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.25);
+    transition: transform 0.06s ease, box-shadow 0.06s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .score-btn:active {
+    transform: translateY(6px);
+  }
+
+  /* 得点ごとの配色: 寒色(低得点) → 暖色(高得点) */
+  .score-btn[data-score="100"] {
+    background: linear-gradient(145deg, #38bdf8, #0284c7);
+    box-shadow: 0 6px 0 #075985, 0 10px 16px rgba(0,0,0,0.35);
+  }
+  .score-btn[data-score="100"]:active { box-shadow: 0 0 0 #075985, 0 4px 8px rgba(0,0,0,0.3); }
+
+  .score-btn[data-score="200"] {
+    background: linear-gradient(145deg, #34d399, #059669);
+    box-shadow: 0 6px 0 #065f46, 0 10px 16px rgba(0,0,0,0.35);
+  }
+  .score-btn[data-score="200"]:active { box-shadow: 0 0 0 #065f46, 0 4px 8px rgba(0,0,0,0.3); }
+
+  .score-btn[data-score="300"] {
+    background: linear-gradient(145deg, #facc15, #eab308);
+    box-shadow: 0 6px 0 #a16207, 0 10px 16px rgba(0,0,0,0.35);
+  }
+  .score-btn[data-score="300"]:active { box-shadow: 0 0 0 #a16207, 0 4px 8px rgba(0,0,0,0.3); }
+
+  .score-btn[data-score="400"] {
+    background: linear-gradient(145deg, #fb923c, #ea580c);
+    box-shadow: 0 6px 0 #9a3412, 0 10px 16px rgba(0,0,0,0.35);
+  }
+  .score-btn[data-score="400"]:active { box-shadow: 0 0 0 #9a3412, 0 4px 8px rgba(0,0,0,0.3); }
+
+  .score-btn[data-score="500"] {
+    background: linear-gradient(145deg, #f87171, #dc2626);
+    box-shadow: 0 6px 0 #991b1b, 0 10px 16px rgba(0,0,0,0.35);
+  }
+  .score-btn[data-score="500"]:active { box-shadow: 0 0 0 #991b1b, 0 4px 8px rgba(0,0,0,0.3); }
+  .end-btn {
+    width: 100%;
+    max-width: 520px;
+    padding: 18px;
+    font-size: 20px;
+    font-weight: bold;
+    border: none;
+    border-radius: 16px;
+    background: linear-gradient(145deg, #64748b, #334155);
+    color: white;
+    box-shadow: 0 5px 0 #1e293b, 0 8px 14px rgba(0,0,0,0.3);
+    transition: transform 0.06s ease, box-shadow 0.06s ease;
+  }
+  .end-btn:active {
+    transform: translateY(5px);
+    box-shadow: 0 0 0 #1e293b;
+  }
+
+  /* ---------- ロック画面（終了後・結果発表前） ---------- */
+  #screen-locked h2 {
+    font-size: clamp(24px, 6vw, 34px);
+    color: var(--gold);
+    margin-bottom: 40px;
+    text-align: center;
+  }
+  .reveal-btn {
+    padding: 24px 48px;
+    font-size: clamp(22px, 6vw, 30px);
+    font-weight: 900;
+    border: none;
+    border-radius: 60px;
+    background: linear-gradient(145deg, var(--gold), #f59e0b);
+    color: var(--purple-dark);
+    box-shadow: 0 6px 0 #b45309, 0 10px 20px rgba(0,0,0,0.4);
+    transition: transform 0.08s ease, box-shadow 0.08s ease;
+    animation: pulse 1.4s ease-in-out infinite;
+  }
+  .reveal-btn:active {
+    transform: translateY(6px) scale(0.98);
+    box-shadow: 0 0 0 #b45309;
+  }
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+  }
+
+  /* ---------- 結果画面 ---------- */
+  #screen-result h2 {
+    font-size: clamp(18px, 4vw, 24px);
+    letter-spacing: 0.1em;
+    color: var(--purple-light);
+    margin: 0 0 8px;
+  }
+  .result-number {
+    font-size: clamp(70px, 22vw, 160px);
+    font-weight: 900;
+    color: var(--gold);
+    text-shadow: 0 0 30px rgba(251,191,36,0.6), 0 4px 10px rgba(0,0,0,0.4);
+    line-height: 1;
+    margin: 10px 0 4px;
+    font-variant-numeric: tabular-nums;
+  }
+  .result-unit {
+    font-size: clamp(20px, 5vw, 32px);
+    color: var(--white);
+    margin-bottom: 40px;
+  }
+  .again-btn {
+    padding: 18px 44px;
+    font-size: 20px;
+    font-weight: bold;
+    border: none;
+    border-radius: 50px;
+    background: linear-gradient(145deg, #ffffff, var(--purple-light));
+    color: var(--purple-dark);
+    box-shadow: 0 5px 0 #8b7bc4, 0 8px 14px rgba(0,0,0,0.3);
+    opacity: 0;
+    transition: opacity 0.4s ease, transform 0.06s ease, box-shadow 0.06s ease;
+    pointer-events: none;
+  }
+  .again-btn.show {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .again-btn:active {
+    transform: translateY(5px);
+    box-shadow: 0 0 0 #8b7bc4;
+  }
+
+  /* ---------- 紙吹雪 ---------- */
+  #confetti-layer {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+    z-index: 50;
+  }
+  .confetti-piece {
+    position: absolute;
+    top: -20px;
+    width: 10px;
+    height: 16px;
+    opacity: 0.95;
+    animation: fall linear forwards;
+  }
+  @keyframes fall {
+    to {
+      transform: translateY(115vh) rotate(720deg);
+      opacity: 0.9;
+    }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- 得点入力画面 -->
+  <div id="screen-play" class="screen active">
+    <div class="header">
+      <h1>文化祭スコアゲーム</h1>
+    </div>
+
+    <div class="score-grid">
+      <button class="score-btn" data-score="100">100</button>
+      <button class="score-btn" data-score="200">200</button>
+      <button class="score-btn" data-score="300">300</button>
+      <button class="score-btn" data-score="400">400</button>
+      <button class="score-btn" data-score="500">500</button>
+    </div>
+
+    <button class="end-btn" id="btn-end">ゲーム終了</button>
+  </div>
+
+  <!-- ロック画面 -->
+  <div id="screen-locked" class="screen">
+    <h2>ゲーム終了！</h2>
+    <button class="reveal-btn" id="btn-reveal">結果発表 🎉</button>
+  </div>
+
+  <!-- 結果画面 -->
+  <div id="screen-result" class="screen">
+    <h2>あなたの得点は…</h2>
+    <div class="result-number" id="result-number">0</div>
+    <div class="result-unit">点</div>
+    <button class="again-btn" id="btn-again">もう一度</button>
+  </div>
+
+  <div id="confetti-layer"></div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ---------------- 状態管理 ----------------
+  let total = 0;
+
+  const screenPlay = document.getElementById('screen-play');
+  const screenLocked = document.getElementById('screen-locked');
+  const screenResult = document.getElementById('screen-result');
+  const resultNumberEl = document.getElementById('result-number');
+  const againBtn = document.getElementById('btn-again');
+
+  function showScreen(el) {
+    [screenPlay, screenLocked, screenResult].forEach(s => s.classList.remove('active'));
+    el.classList.add('active');
+  }
+
+  function resetGame() {
+    total = 0;
+    resultNumberEl.textContent = '0';
+    againBtn.classList.remove('show');
+    showScreen(screenPlay);
+  }
+
+  // ---------------- 音声 (Web Audio API) ----------------
+  let audioCtx = null;
+  function getAudioCtx() {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+    return audioCtx;
+  }
+
+  function playTone(freq, startTime, duration, type, gainPeak) {
+    const ctx = getAudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = type || 'sine';
+    osc.frequency.setValueAtTime(freq, startTime);
+    gain.gain.setValueAtTime(0, startTime);
+    gain.gain.linearRampToValueAtTime(gainPeak || 0.25, startTime + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(startTime);
+    osc.stop(startTime + duration + 0.02);
+  }
+
+  function playTapSound() {
+    const ctx = getAudioCtx();
+    const now = ctx.currentTime;
+    playTone(660, now, 0.08, 'square', 0.15);
+  }
+
+  function playFanfare() {
+    const ctx = getAudioCtx();
+    const now = ctx.currentTime;
+    // 簡易ファンファーレ: ドミソド 上昇アルペジオ + 最後に和音
+    const notes = [523.25, 659.25, 783.99, 1046.50]; // C5 E5 G5 C6
+    notes.forEach((freq, i) => {
+      playTone(freq, now + i * 0.13, 0.35, 'triangle', 0.22);
+    });
+    // 最後にジャン！と和音を重ねる
+    const chordTime = now + notes.length * 0.13 + 0.05;
+    [1046.50, 1318.51, 1567.98].forEach(freq => {
+      playTone(freq, chordTime, 0.9, 'sawtooth', 0.15);
+    });
+  }
+
+  // ---------------- 得点ボタン ----------------
+  document.querySelectorAll('.score-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const points = parseInt(btn.getAttribute('data-score'), 10);
+      total += points;
+      playTapSound();
+    });
+  });
+
+  // ---------------- 終了 → ロック画面 ----------------
+  document.getElementById('btn-end').addEventListener('click', () => {
+    showScreen(screenLocked);
+  });
+
+  // ---------------- 結果発表 ----------------
+  document.getElementById('btn-reveal').addEventListener('click', () => {
+    showScreen(screenResult);
+    playFanfare();
+    launchConfetti();
+    animateCountUp(total, 1800);
+  });
+
+  function animateCountUp(target, duration) {
+    const start = performance.now();
+    function step(now) {
+      const elapsed = now - start;
+      const progress = Math.min(elapsed / duration, 1);
+      // easeOutCubic
+      const eased = 1 - Math.pow(1 - progress, 3);
+      const value = Math.round(target * eased);
+      resultNumberEl.textContent = value.toLocaleString('ja-JP');
+      if (progress < 1) {
+        requestAnimationFrame(step);
+      } else {
+        resultNumberEl.textContent = target.toLocaleString('ja-JP');
+        againBtn.classList.add('show');
+      }
+    }
+    requestAnimationFrame(step);
+  }
+
+  // ---------------- もう一度 ----------------
+  againBtn.addEventListener('click', resetGame);
+
+  // ---------------- 紙吹雪エフェクト ----------------
+  const confettiLayer = document.getElementById('confetti-layer');
+  const confettiColors = ['#fbbf24', '#ffffff', '#c4b5fd', '#8b5cf6', '#f472b6', '#facc15'];
+
+  function launchConfetti() {
+    confettiLayer.innerHTML = '';
+    const count = 80;
+    for (let i = 0; i < count; i++) {
+      const piece = document.createElement('div');
+      piece.className = 'confetti-piece';
+      const color = confettiColors[Math.floor(Math.random() * confettiColors.length)];
+      piece.style.background = color;
+      piece.style.left = Math.random() * 100 + 'vw';
+      const duration = 2.2 + Math.random() * 1.8;
+      const delay = Math.random() * 0.6;
+      piece.style.animationDuration = duration + 's';
+      piece.style.animationDelay = delay + 's';
+      piece.style.borderRadius = Math.random() < 0.5 ? '50%' : '2px';
+      confettiLayer.appendChild(piece);
+    }
+    // 自動クリーンアップ
+    setTimeout(() => {
+      confettiLayer.innerHTML = '';
+    }, 5000);
+  }
+
+  // iOS: 最初のタップでAudioContextを有効化しておく
+  document.body.addEventListener('touchstart', function unlockAudio() {
+    getAudioCtx();
+    document.body.removeEventListener('touchstart', unlockAudio);
+  }, { once: true });
+
+})();
+</script>
+</body>
+</html>
