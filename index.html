@@ -102,6 +102,12 @@
   }
 
   /* 得点ごとの配色: 寒色(低得点) → 暖色(高得点) */
+  .score-btn[data-score="50"] {
+    background: linear-gradient(145deg, #a5f3fc, #22d3ee);
+    box-shadow: 0 5px 0 #0e7490, 0 8px 14px rgba(0,0,0,0.35);
+  }
+  .score-btn[data-score="50"]:active { box-shadow: 0 0 0 #0e7490, 0 3px 6px rgba(0,0,0,0.3); }
+
   .score-btn[data-score="150"] {
     background: linear-gradient(145deg, #38bdf8, #0284c7);
     box-shadow: 0 5px 0 #075985, 0 8px 14px rgba(0,0,0,0.35);
@@ -170,12 +176,13 @@
   </div>
 
   <div class="score-grid">
-    <button class="score-btn" data-score="5000">5000</button>
-    <button class="score-btn" data-score="1000">1000</button>
-    <button class="score-btn" data-score="750">750</button>
-    <button class="score-btn" data-score="300">300</button>
-    <button class="score-btn" data-score="250">250</button>
+    <button class="score-btn" data-score="50">50</button>
     <button class="score-btn" data-score="150">150</button>
+    <button class="score-btn" data-score="250">250</button>
+    <button class="score-btn" data-score="300">300</button>
+    <button class="score-btn" data-score="750">750</button>
+    <button class="score-btn" data-score="1000">1000</button>
+    <button class="score-btn" data-score="5000">5000</button>
   </div>
 
   <button class="reset-btn" id="btn-reset">リセット</button>
