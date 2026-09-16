@@ -57,14 +57,8 @@
   .total-display {
     text-align: center;
   }
-  .total-label {
-    font-size: clamp(14px, 3.5vw, 18px);
-    color: var(--purple-light);
-    letter-spacing: 0.1em;
-    margin-bottom: 2px;
-  }
   .total-number {
-    font-size: clamp(48px, 15vw, 84px);
+    font-size: clamp(40px, 12vw, 68px);
     font-weight: 900;
     color: var(--gold);
     text-shadow: 0 0 24px rgba(251,191,36,0.5), 0 4px 8px rgba(0,0,0,0.4);
@@ -75,20 +69,20 @@
   .score-grid {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 8px;
     width: 100%;
     max-width: 420px;
     flex: 1;
     justify-content: center;
-    padding: 12px 0;
+    padding: 8px 0;
   }
 
   .score-btn {
     border: none;
-    border-radius: 18px;
+    border-radius: 14px;
     padding: 0;
-    height: 62px;
-    font-size: clamp(24px, 7vw, 32px);
+    height: 48px;
+    font-size: clamp(20px, 6vw, 26px);
     font-weight: 800;
     color: white;
     text-shadow: 0 2px 4px rgba(0,0,0,0.25);
@@ -171,7 +165,6 @@
   </div>
 
   <div class="total-display">
-    <div class="total-label">合計得点</div>
     <div class="total-number" id="total-number">0</div>
   </div>
 
